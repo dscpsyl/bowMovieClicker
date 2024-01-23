@@ -57,15 +57,18 @@ class feature_extractor:
         #* Count the number of times each word appears in the sentence
         wordCount: dict = Counter(wordList)
         
-        #* Create the sparse vector with the len of the different words in the sentence
-        x: sparse.csc_matrix = sparse.csc_matrix((len(wordCount), 1), dtype=np.int64) 
+        #* Create the lil vector with the len of the different words in the sentence
+        t: sparse.lil_matrix = sparse.lil_matrix((self.d, 1), dtype=np.int64) 
         
         #* Populate the sparse vector with the count of each word in the sentence
         for word, count in wordCount.items():
             # Check of the word is in the vocab list that we care about
             if word in self.vocab_dict:
                 # Populate the sparse vector with the count of the word at the index of the word defined in the vocab list
-                x[self.vocab_dict[word], 0] = count
+                t[self.vocab_dict[word], 0] = count
+        
+        #* Convert the lil vector to a csc vector
+        x: sparse.csc_matrix = t.tocsc()
         
         #* Return the sparse feature vector
         return x
@@ -138,9 +141,9 @@ class classifier_agent():
         self.data2feat = data_processor(feat_map)
         self.batch_feat_map = self.data2feat.batch_feat_map
 
-        self.params = np.array(params)
+        self.params: np.array = np.array(params)
 
-    def score_function(self, X):
+    def score_function(self, X) -> np.array:
         '''
         This function computes the score function of the classifier.
         Note that the score function is linear in X. 
@@ -161,14 +164,12 @@ class classifier_agent():
         
         #* Score each feature vector
         for i in range(m): # Loop through each column of the feature array (aka loop through each feature vector)
-            s[i] = X[:,i].dot(self.params.T) # Compute the dot product of the params vector and the feature vector (transpose the params vector to make it a column vector for matrix multiplication)
+            temp: sparse.csc_matrix = X[:,i].dot(self.params.T) # Compute the dot product of the params vector and the feature vector (transpose the params vector to make it a column vector for matrix multiplication)
+            s[i]: np.array = sum(temp)
             
         #* Return the score vector
         return s
     
-
-
-
     def predict(self, X, RAW_TEXT=False, RETURN_SCORE=False):
         '''
         This function makes a binary prediction or a numerical score
@@ -177,17 +178,20 @@ class classifier_agent():
         :param RETURN_SCORE: If True, then return the score directly
         :return:
         '''
+        
+        #* Turn the raw text into a feature matrix of the input is raw text
         if RAW_TEXT:
             X = self.batch_feat_map(X)
-
-        # TODO ======================== YOUR CODE HERE =====================================
-        # This should be a simple but useful function.
-        preds = np.zeros(shape=X.shape[1])
-
+            
+        #* Initialize the prediction vector
+        preds: np.array = np.zeros(shape=X.shape[1])
+        
+        #* Score the feature matrix
+        scores: np.array = self.score_function(X)
+        
 
         # Tip:   Read the required format of the predictions.
 
-        # TODO =============================================================================
 
         return preds
 
@@ -346,6 +350,7 @@ class classifier_agent():
 
         for i in range(nepoch):
             for j in range(len(ytrain)):
+                pass
 
             # TODO ======================== YOUR CODE HERE =====================================
             # You need to iteratively update self.params
@@ -355,11 +360,11 @@ class classifier_agent():
 
             # TODO =============================================================================
             # logging
-            train_losses.append(self.loss_function(Xtrain, ytrain))
-            train_errors.append(self.error(Xtrain, ytrain))
+            # train_losses.append(self.loss_function(Xtrain, ytrain))
+            # train_errors.append(self.error(Xtrain, ytrain))
 
-            print('epoch =',i,'iter=',i*len(ytrain)+j+1,'loss = ', train_losses[-1],
-                  'error = ', train_errors[-1])
+            # print('epoch =',i,'iter=',i*len(ytrain)+j+1,'loss = ', train_losses[-1],
+            #       'error = ', train_errors[-1])
 
 
         return train_losses, train_errors
