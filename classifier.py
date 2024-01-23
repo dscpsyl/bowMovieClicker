@@ -8,7 +8,7 @@ import string
 
 # utility functions we provides
 
-def load_data(file_name):
+def load_data(file_name: string) -> list:
     '''
     @input:
      file_name: a string. should be either "training.txt" or "texting.txt"
@@ -16,13 +16,13 @@ def load_data(file_name):
      a list of sentences
     '''
     with open(file_name, "r") as file:
-        sentences = file.readlines()
+        sentences: list = file.readlines()
     return sentences
 
 
-def tokenize(sentence):
+def tokenize(sentence: list) -> list:
     # Convert a sentence into a list of words
-    wordlist = sentence.translate(str.maketrans('', '', string.punctuation)).lower().strip().split(
+    wordlist: list = sentence.translate(str.maketrans('', '', string.punctuation)).lower().strip().split(
         ' ')
 
     return [word.strip() for word in wordlist]
@@ -39,7 +39,7 @@ class feature_extractor:
                            enumerate(vocab)}  # This constructs a word 2 index dictionary
         self.d = len(vocab)
 
-    def bag_of_word_feature(self, sentence):
+    def bag_of_word_feature(self, sentence: list) -> sparse.csc_matrix:
         '''
         Bag of word feature extactor. Reminder: The 
         `vocab_dict` has the following format:
@@ -52,13 +52,13 @@ class feature_extractor:
         '''
         
         #* Tokenize and sanitize the sentence
-        wordList = self.tokenize(sentence)
+        wordList: list = self.tokenize(sentence)
         
         #* Count the number of times each word appears in the sentence
-        wordCount = Counter(wordList)
+        wordCount: dict = Counter(wordList)
         
         #* Create the sparse vector with the len of the different words in the sentence
-        x = sparse.csc_matrix((len(wordCount), 1), dtype=np.int64) 
+        x: sparse.csc_matrix = sparse.csc_matrix((len(wordCount), 1), dtype=np.int64) 
         
         #* Populate the sparse vector with the count of each word in the sentence
         for word, count in wordCount.items():
