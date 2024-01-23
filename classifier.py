@@ -41,25 +41,34 @@ class feature_extractor:
 
     def bag_of_word_feature(self, sentence):
         '''
-        Bag of word feature extactor
+        Bag of word feature extactor. Reminder: The 
+        `vocab_dict` has the following format:
+        {word1: 0, word2: 1, word3: 2, ...} where
+        word1, word2, word3, ... are the words in the vocabulary
+        0, 1, 2, ... are the indices of the words in the vocabulary (aka the indicies of the feature vector)
+        
         :param sentence: A text string representing one "movie review"
         :return: The feature vector in the form of a "sparse.csc_array" with shape = (d,1)
         '''
-
-        # TODO ======================== YOUR CODE HERE =====================================
-        # Hint 1:  there are multiple ways of instantiating a sparse csc matrix.
-        #  Do NOT construct a dense numpy.array then convert to sparse.csc_array. That will defeat its purpose.
-
-        # Hint 2:  There might be words from the input sentence not in the vocab_dict when we try to use this.
-
-        # Hint 3:  Python's standard library: Collections.Counter might be useful
-
-        x = sparse.csc_array(shape=(3,1)) # please modify this. 3 is not the right dimension.
-
-        # TODO =============================================================================
+        
+        #* Tokenize and sanitize the sentence
+        wordList = self.tokenize(sentence)
+        
+        #* Count the number of times each word appears in the sentence
+        wordCount = Counter(wordList)
+        
+        #* Create the sparse vector with the len of the different words in the sentence
+        x = sparse.csc_matrix((len(wordCount), 1), dtype=np.int64) 
+        
+        #* Populate the sparse vector with the count of each word in the sentence
+        for word, count in wordCount.items():
+            # Check of the word is in the vocab list that we care about
+            if word in self.vocab_dict:
+                # Populate the sparse vector with the count of the word at the index of the word defined in the vocab list
+                x[self.vocab_dict[word], 0] = count
+        
+        #* Return the sparse feature vector
         return x
-
-        # Solution:
 
     def __call__(self, sentence):
         # This function makes this any instance of this python class a callable object
