@@ -472,33 +472,3 @@ class custom_feature_extractor2(feature_extractor):
     def __call__(self, sentence):
         # If you don't edit anything you will use the standard bag of words feature
         return self.feature_map(sentence)
-
-
-
-
-class custom_feature_extractor2(feature_extractor):
-    '''
-    This is a template for implementing more advanced feature extractor
-    '''
-    def __init__(self, vocab, tokenizer, sklearn_transform):
-        super().__init__(vocab, tokenizer)
-        # TODO ======================== YOUR CODE HERE =====================================
-        # Adding external inputs that need to be saved.
-        self.ngram=sklearn_transform.transform
-        # TODO =============================================================================
-
-    def feature_map(self,sentence):
-        # -------- Your implementation of the advanced feature ---------------
-        # TODO ======================== YOUR CODE HERE =====================================
-        #x = self.bag_of_word_feature(sentence)
-        # Implementing the advanced feature.
-        x = self.ngram([sentence]).T
-        # TODO =============================================================================
-        return x
-
-    def __call__(self, sentence):
-        # If you don't edit anything you will use the standard bag of words feature
-        return self.feature_map(sentence)
-
-
-
