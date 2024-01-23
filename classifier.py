@@ -143,25 +143,29 @@ class classifier_agent():
     def score_function(self, X):
         '''
         This function computes the score function of the classifier.
-        Note that the score function is linear in X
-        :param X: A scipy.sparse.csc_array of size d by m, each column denotes one feature vector
+        Note that the score function is linear in X. 
+        :param X: A scipy.sparse.csc_array of size d by m, each column denotes one feature vector.
+                    Thus, reach row (0...d) denotes one feature dimension, and each column (0...m) denotes one data point.
         :return: A numpy.array of length m with the score computed for each data point
         '''
 
+        #* Check the size of the params vector against the feature vector
         (d,m) = X.shape
-        d1= self.params.shape[0]
-        if d != d1:
-            self.params = np.array([0.0 for i in range(d)])
+        d1 = self.params.shape[0]
+        if d != d1: # If they are not the same, then throw an error
+            raise ValueError("The size of the params vector is not the same as the feature vector when scoring.") 
+            # self.params = np.array([0.0 for i in range(d)]) <-- This was included in the original code, but I don't think it is correct
 
-        # TODO ======================== YOUR CODE HERE =====================================
-        s = np.zeros(shape=m)  # this is the desired type and shape for the output
-
-        # the score function is NOT a soft probabilistic prediction.
-        # It is the score the classifier used to compare different classes,
-        # e.g., for linear classifier it is the weighted linear combination of the features
-        #       in decision tree classifiers, it is the voting score at each leaf node.
-        # TODO =============================================================================
+        #* Initialize the score vector
+        s: np.array = np.zeros(shape=m)  # this is the desired type and shape for the output
+        
+        #* Score each feature vector
+        for i in range(m): # Loop through each column of the feature array (aka loop through each feature vector)
+            s[i] = X[:,i].dot(self.params.T) # Compute the dot product of the params vector and the feature vector (transpose the params vector to make it a column vector for matrix multiplication)
+            
+        #* Return the score vector
         return s
+    
 
 
 
