@@ -45,6 +45,7 @@ class data_processor:
         :return: the resulting feature matrix in sparse.csc_array of shape d by m
         '''
         if isinstance(sentences, list):
+            print("::Hstacking the processed data...")
             X = scipy.sparse.hstack([self.feat_map(sentence) for sentence in sentences])
         else:
             X = self.feat_map(sentences)
@@ -64,6 +65,7 @@ class data_processor:
         # The filename should be *.npy
         X = self.batch_feat_map(sentences)
         y = np.array(labels)
+        print("Saving processed data to ", filename)
         with open(filename, 'wb') as f:
             np.save(f, X, allow_pickle=True)
         return X, y
@@ -110,7 +112,7 @@ class feature_extractor:
         x: sparse.csc_matrix = t.tocsc()
         
         #* Sanity check
-        assert x.shape == (self.d, 1), "bag_of_word_feature::The shape of the sparse vector is not the same as the vocab list."
+        assert x.shape == (self.d, 1), "bag_of_word_feature::The shape of the sparse vector is not the same as the vocab list: %s." % str(x.shape)
         
         #* Return the sparse feature vector
         return x
@@ -142,12 +144,13 @@ class classifier_agent():
 
         self.params: np.ndarray = np.array(params)
 
-    def score_function(self, X) -> np.ndarray:
+    def score_function(self, X: sparse.csc_matrix) -> np.ndarray:
         '''
         This function computes the score function of the classifier.
         Note that the score function is linear in X. 
         :param X: A scipy.sparse.csc_array of size d by m, each column denotes one feature vector.
                     Thus, reach row (0...d) denotes one feature dimension, and each column (0...m) denotes one data point.
+                    Thus, each column is a feature vector.
         :return: A numpy.array of length m with the score computed for each data point
         '''
 
@@ -159,20 +162,24 @@ class classifier_agent():
             # self.params = np.array([0.0 for i in range(d)]) <-- This was included in the original code, but I don't think it is correct
 
         #* Initialize the score vector
-        s: np.ndarray = np.zeros(shape=m)  # this is the desired type and shape for the output
+        s: np.ndarray = np.zeros(shape=m, dtype=float)  # this is the desired type and shape for the output
         
         #* Score each feature vector
-        for i in range(m): # Loop through each column of the feature array (aka loop through each feature vector)
-            temp: sparse.csc_matrix = X[:,i].multiplication(self.params.T) # Compute the element product of the params vector and the feature vector (transpose the params vector to make it a column vector for matrix multiplication)
-            s[i] = sum(temp)
+        for i in range(m): # Loop through each row of the feature array (aka loop through each feature vector)
+            temp: sparse.csc_matrix = X[:,i].T.multiply(self.params) # Compute the element product of the params vector and the feature vector
+            if type(temp) != sparse.csc_matrix: # If the temp vector is not a sparse vector, then convert it to a sparse vector
+                temp = sparse.csc_matrix(temp)
+                assert temp.shape == (1, len(self.params)), "score_function::The resulting multiplication is not a 1D vector: %s." % str(temp.shape)
+            s[i] = temp.sum()
             
         #* Sanity check
-        assert s.shape == (m, 1), "score_function::The score vector is not the same size as the feature vector."
+        assert s.shape == (m, ), "score_function::The score vector is not the same shape as the feature vector: %s." % str(s.shape)
+        assert len(s) == m, "score_function::The score vector is not the same length as the feature vector: %s." % str(s.shape)
             
         #* Return the score vector
         return s
     
-    def predict(self, X, RAW_TEXT=False, RETURN_SCORE=False) -> np.ndarray:
+    def predict(self, X: sparse.csc_matrix, RAW_TEXT=False, RETURN_SCORE=False) -> np.ndarray:
         '''
         This function makes a binary prediction or a numerical score
         :param X: d by m sparse (csc_array) matrix
@@ -206,7 +213,7 @@ class classifier_agent():
             
             return preds
 
-    def error(self, X, y, RAW_TEXT=False) -> float:
+    def error(self, X: sparse.csc_matrix, y: list, RAW_TEXT=False) -> float:
         '''
         :param X: d by m sparse (csc_array) matrix
         :param y: m dimensional vector (numpy.array) of true labels
@@ -215,15 +222,14 @@ class classifier_agent():
         :return: The average error rate
         '''
         #* The predicted results
-        results: np.ndarray = np.zeros(shape=y.shape)
+        results: np.ndarray = np.zeros(shape=len(y))
         
         #* If the input is raw text, then turn it into the predicted results
         if RAW_TEXT:
             X = self.batch_feat_map(X)
-            y = np.array(y)
             results = self.predict(X, RAW_TEXT=True)
         else: # If the input is just the results, then use the input as the predicted results
-            results = X
+            results = self.predict(X)
         
         #? The error rate is (num_of_wrong_predictions / total_num_of_predictions)
         
@@ -241,7 +247,7 @@ class classifier_agent():
 
         return err
 
-    def loss_function(self, X, y) -> np.floating:
+    def loss_function(self, X: sparse.csc_matrix, y: list) -> np.float64:
         '''
         This function implements the logistic loss at the current self.params
 
@@ -258,16 +264,18 @@ class classifier_agent():
         probs: np.ndarray = np.exp(scores) / (1 + np.exp(scores))
         
         #* Calculate the loss for each feature vector
-        losses: np.ndarray = -(np.log(probs) * y + np.log(1 - probs) * (1 - y.T))
+        npY: np.ndarray = np.array(y)
+        const1: np.ndarray = np.ones(shape=npY.shape)
+        losses: np.ndarray = np.multiply(-1, (np.log(probs) * npY + np.log(np.subtract(const1, probs)) * (np.subtract(const1, npY))))
         
-        avgLoss: np.floating = np.mean(losses)
-        
+        avgLoss: np.float64 = np.mean(losses)
+
         #* Sanity check
-        assert type(avgLoss) == np.floating, "loss_function::The average loss is not a float."
+        assert type(avgLoss) == np.float64, "loss_function::The average loss is not a float: %s." % str(type(avgLoss))
         
         return avgLoss
         
-    def gradient(self, X, y) -> np.ndarray:
+    def gradient(self, X: sparse.csc_matrix, y: list) -> np.ndarray:
         '''
         It returns the gradient of the (average) loss function at the current params.
         :param X: d by m sparse (csc_array) matrix
@@ -287,8 +295,8 @@ class classifier_agent():
         yStretched : np.ndarray = np.asarray(yList)
         
         #* Calculate the terms
-        term1: np.ndarray = X.multiplication(yStretched)
-        term2: np.ndarray = X.multiplication(scalar)
+        term1: np.ndarray = X.multiply(yStretched)
+        term2: np.ndarray = X.multiply(scalar)
         
         #* Calculate the gradient for all feature vectors throguh matrix operations
         grad: np.ndarray = np.mean(term1 - term2, axis=1)
@@ -328,6 +336,8 @@ class classifier_agent():
 
         train_losses = [self.loss_function(Xtrain, ytrain)]
         train_errors = [self.error(Xtrain, ytrain)]
+        
+        assert False, "train_gd::The train_gd function has not been implemented yet."
 
         # Solution:
         for i in range(niter):

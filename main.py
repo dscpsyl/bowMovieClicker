@@ -12,11 +12,11 @@ def main():
         vocab_list = [item.strip() for item in reading]
         vocab_dict = {item: i for i, item in enumerate(vocab_list)}
 
-    print("Loading and processing data ...")
-
+    print("Loading data...")
     sentences_pos = load_data("data/training_pos.txt")
     sentences_neg = load_data("data/training_neg.txt")
 
+    print("Creating training and test data...")
     train_sentences = sentences_pos + sentences_neg
 
     train_labels = [1 for i in range(len(sentences_pos))] + [0 for i in range(len(sentences_neg))]
@@ -26,20 +26,17 @@ def main():
     test_sentences = sentences_pos + sentences_neg
     test_labels = [1 for i in range(len(sentences_pos))] + [0 for i in range(len(sentences_neg))]
 
+    print("Creeating feature map...")
+    feat_map = feature_extractor(vocab_list, tokenize) # You many replace this with a different feature extractor
 
-    feat_map = feature_extractor(vocab_list, tokenize)
-    # You many replace this with a different feature extractor
-
-    # feat_map = tfidf_extractor(vocab_list, tokenize, word_freq)
-
-    # Preprocess the training data into features
-
+    print("Processing data and feature extraction...")
     text2feat = data_processor(feat_map)
-    Xtrain, ytrain = text2feat.process_data_and_save_as_file(train_sentences, train_labels, "train_data.npy")
+    # Xtrain, ytrain = text2feat.process_data_and_save_as_file(train_sentences, train_labels, "train_data.npy")
 
-    # Load the saved Xtrain
-
-    #Xtrain = text2feat.load_data_from_file("train_data.npy")
+    print("::Loading the saved Xtrain instead of reprocessing the data")
+    Xtrain = text2feat.load_data_from_file("train_data.npy")
+    ytrain = train_labels
+    
 
 
 
