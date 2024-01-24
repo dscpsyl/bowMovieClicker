@@ -1,14 +1,12 @@
-
-
 import scipy
 from scipy import sparse
 import numpy as np
 from collections import Counter
 import string
 
-# utility functions we provides
+# Provided utility functions
 
-def load_data(file_name: string) -> list:
+def load_data(file_name: str) -> list:
     '''
     @input:
      file_name: a string. should be either "training.txt" or "texting.txt"
@@ -20,62 +18,11 @@ def load_data(file_name: string) -> list:
     return sentences
 
 
-def tokenize(sentence: list) -> list:
+def tokenize(sentence: str) -> list:
     # Convert a sentence into a list of words
-    wordlist: list = sentence.translate(str.maketrans('', '', string.punctuation)).lower().strip().split(
-        ' ')
+    wordlist: list = sentence.translate(str.maketrans('', '', string.punctuation)).lower().strip().split(' ')
 
     return [word.strip() for word in wordlist]
-
-
-# Main "Feature Extractor" class:
-# It takes the provided tokenizer and vocab as an input.
-
-class feature_extractor:
-    def __init__(self, vocab, tokenizer):
-        self.tokenize = tokenizer
-        self.vocab = vocab  # This is a list of words in vocabulary
-        self.vocab_dict = {item: i for i, item in
-                           enumerate(vocab)}  # This constructs a word 2 index dictionary
-        self.d = len(vocab)
-
-    def bag_of_word_feature(self, sentence: list) -> sparse.csc_matrix:
-        '''
-        Bag of word feature extactor. Reminder: The 
-        `vocab_dict` has the following format:
-        {word1: 0, word2: 1, word3: 2, ...} where
-        word1, word2, word3, ... are the words in the vocabulary
-        0, 1, 2, ... are the indices of the words in the vocabulary (aka the indicies of the feature vector)
-        
-        :param sentence: A text string representing one "movie review"
-        :return: The feature vector in the form of a "sparse.csc_array" with shape = (d,1)
-        '''
-        
-        #* Tokenize and sanitize the sentence
-        wordList: list = self.tokenize(sentence)
-        
-        #* Count the number of times each word appears in the sentence
-        wordCount: dict = Counter(wordList)
-        
-        #* Create the lil vector with the len of the different words in the sentence
-        t: sparse.lil_matrix = sparse.lil_matrix((self.d, 1), dtype=np.int64) 
-        
-        #* Populate the sparse vector with the count of each word in the sentence
-        for word, count in wordCount.items():
-            # Check of the word is in the vocab list that we care about
-            if word in self.vocab_dict:
-                # Populate the sparse vector with the count of the word at the index of the word defined in the vocab list
-                t[self.vocab_dict[word], 0] = count
-        
-        #* Convert the lil vector to a csc vector
-        x: sparse.csc_matrix = t.tocsc()
-        
-        #* Return the sparse feature vector
-        return x
-
-    def __call__(self, sentence):
-        # This function makes this any instance of this python class a callable object
-        return self.bag_of_word_feature(sentence)
 
 
 class data_processor:
@@ -122,6 +69,58 @@ class data_processor:
         return X, y
 
 
+# Classes to be implemented
+
+class feature_extractor:
+    def __init__(self, vocab, tokenizer):
+        self.tokenize = tokenizer
+        self.vocab = vocab  # This is a list of words in vocabulary
+        self.vocab_dict = {item: i for i, item in enumerate(vocab)}  # This constructs a word 2 index dictionary
+        self.d = len(vocab)
+
+    def bag_of_word_feature(self, sentence: list) -> sparse.csc_matrix:
+        '''
+        Bag of word feature extactor. Reminder: The 
+        `vocab_dict` has the following format:
+        {word1: 0, word2: 1, word3: 2, ...} where
+        word1, word2, word3, ... are the words in the vocabulary
+        0, 1, 2, ... are the indices of the words in the vocabulary (aka the indicies of the feature vector)
+        
+        :param sentence: A text string representing one "movie review"
+        :return: The feature vector in the form of a "sparse.csc_array" with shape = (d,1)
+        '''
+        
+        #* Tokenize and sanitize the sentence
+        wordList: list = self.tokenize(sentence)
+        
+        #* Count the number of times each word appears in the sentence
+        wordCount: dict = Counter(wordList)
+        
+        #* Create the lil vector with the len of the different words in the sentence
+        t: sparse.lil_matrix = sparse.lil_matrix((self.d, 1), dtype=np.int64) 
+        
+        #* Populate the sparse vector with the count of each word in the sentence
+        for word, count in wordCount.items():
+            # Check of the word is in the vocab list that we care about
+            if word in self.vocab_dict:
+                # Populate the sparse vector with the count of the word at the index of the word defined in the vocab list
+                t[self.vocab_dict[word], 0] = count
+        
+        #* Convert the lil vector to a csc vector
+        x: sparse.csc_matrix = t.tocsc()
+        
+        #* Sanity check
+        assert x.shape == (self.d, 1), "bag_of_word_feature::The shape of the sparse vector is not the same as the vocab list."
+        
+        #* Return the sparse feature vector
+        return x
+
+    def __call__(self, sentence):
+        # This function makes this any instance of this python class a callable object
+        return self.bag_of_word_feature(sentence)
+
+
+#! Make sure you do not de-sparce the matricies
 class classifier_agent():
     def __init__(self, feat_map, params):
         '''
@@ -141,9 +140,9 @@ class classifier_agent():
         self.data2feat = data_processor(feat_map)
         self.batch_feat_map = self.data2feat.batch_feat_map
 
-        self.params: np.array = np.array(params)
+        self.params: np.ndarray = np.array(params)
 
-    def score_function(self, X) -> np.array:
+    def score_function(self, X) -> np.ndarray:
         '''
         This function computes the score function of the classifier.
         Note that the score function is linear in X. 
@@ -160,17 +159,20 @@ class classifier_agent():
             # self.params = np.array([0.0 for i in range(d)]) <-- This was included in the original code, but I don't think it is correct
 
         #* Initialize the score vector
-        s: np.array = np.zeros(shape=m)  # this is the desired type and shape for the output
+        s: np.ndarray = np.zeros(shape=m)  # this is the desired type and shape for the output
         
         #* Score each feature vector
         for i in range(m): # Loop through each column of the feature array (aka loop through each feature vector)
-            temp: sparse.csc_matrix = X[:,i].dot(self.params.T) # Compute the dot product of the params vector and the feature vector (transpose the params vector to make it a column vector for matrix multiplication)
-            s[i]: np.array = sum(temp)
+            temp: sparse.csc_matrix = X[:,i].multiplication(self.params.T) # Compute the element product of the params vector and the feature vector (transpose the params vector to make it a column vector for matrix multiplication)
+            s[i] = sum(temp)
+            
+        #* Sanity check
+        assert s.shape == (m, 1), "score_function::The score vector is not the same size as the feature vector."
             
         #* Return the score vector
         return s
     
-    def predict(self, X, RAW_TEXT=False, RETURN_SCORE=False) -> np.array:
+    def predict(self, X, RAW_TEXT=False, RETURN_SCORE=False) -> np.ndarray:
         '''
         This function makes a binary prediction or a numerical score
         :param X: d by m sparse (csc_array) matrix
@@ -185,19 +187,22 @@ class classifier_agent():
             X = self.batch_feat_map(X)
             
         #* Initialize the prediction vector
-        preds: np.array = np.zeros(shape=X.shape[1])
+        preds: np.ndarray = np.zeros(shape=X.shape[1])
         
         #* Score the feature matrix
-        scores: np.array = self.score_function(X)
+        scores: np.ndarray = self.score_function(X)
         
         if RETURN_SCORE:
-            return scores
+            return scores # Sanity check not needed as the score function already has a sanity check
         else:
             for i, s in enumerate(scores):
                 if s > 0:
                     preds[i] = 1
                 else:
                     preds[i] = 0
+            
+            #* Sanity check
+            assert preds.shape == (X.shape[1],), "predict::The prediction vector is not the same size as the feature vector."
             
             return preds
 
@@ -210,7 +215,7 @@ class classifier_agent():
         :return: The average error rate
         '''
         #* The predicted results
-        results: np.array = np.zeros(shape=y.shape)
+        results: np.ndarray = np.zeros(shape=y.shape)
         
         #* If the input is raw text, then turn it into the predicted results
         if RAW_TEXT:
@@ -229,10 +234,14 @@ class classifier_agent():
                 wrongPredictions += 1.0
         
         err: float = wrongPredictions / float(len(y))
+        
+        #* Sanity check
+        assert err >= 0.0 and err <= 1.0, "error::The error rate is not between 0 and 1."
+        assert type(err) == float, "error::The error rate is not a float."
 
         return err
 
-    def loss_function(self, X, y):
+    def loss_function(self, X, y) -> np.floating:
         '''
         This function implements the logistic loss at the current self.params
 
@@ -242,34 +251,52 @@ class classifier_agent():
 
         '''
 
-        # TODO ======================== YOUR CODE HERE =====================================
-        # The function should work for any integer m > 0.
-        # You may first call score_function
-
-        loss =  0.0
-
-        # TODO =============================================================================
-
-        #return loss
-        return np.mean(loss)
-
-    def gradient(self, X, y):
+        #* Calculate the score for each feature vector
+        scores: np.ndarray = self.score_function(X)
+        
+        #* Convert the scores into probabilities
+        probs: np.ndarray = np.exp(scores) / (1 + np.exp(scores))
+        
+        #* Calculate the loss for each feature vector
+        losses: np.ndarray = -(np.log(probs) * y + np.log(1 - probs) * (1 - y.T))
+        
+        avgLoss: np.floating = np.mean(losses)
+        
+        #* Sanity check
+        assert type(avgLoss) == np.floating, "loss_function::The average loss is not a float."
+        
+        return avgLoss
+        
+    def gradient(self, X, y) -> np.ndarray:
         '''
         It returns the gradient of the (average) loss function at the current params.
         :param X: d by m sparse (csc_array) matrix
         :param y: m dimensional vector (numpy.array) of true labels
         :return: Return an nd.array of size the same as self.params
         '''
+        #* Calculate the compoennts of the e score
+        scores: np.ndarray = self.score_function(X)
+        e: np.ndarray = np.exp(scores)
+        scalar = e / (1 + e)
+        
+        #* Stretch the y vector to be the same size as X (d by m) for element wise multiplication
+        (d, _) = X.shape
+        yList: list = list(y)
+        for _ in range(d):
+            yList.append(yList)
+        yStretched : np.ndarray = np.asarray(yList)
+        
+        #* Calculate the terms
+        term1: np.ndarray = X.multiplication(yStretched)
+        term2: np.ndarray = X.multiplication(scalar)
+        
+        #* Calculate the gradient for all feature vectors throguh matrix operations
+        grad: np.ndarray = np.mean(term1 - term2, axis=1)
+        
+        #* Sanity check
+        assert grad.shape == self.params.shape, "gradient::The gradient vector is not the same size as the params vector."
 
-        # TODO ======================== YOUR CODE HERE =====================================
-        # Hint 1:  Use the score_function first
-        # Hint 2:  vectorized operations will be orders of magnitudely faster than a for loop
-        # Hint 3:  don't make X a dense matrix
-
-        grad = np.zeros_like(self.params)
-        # TODO =============================================================================
         return grad
-
 
 
 
@@ -419,27 +446,27 @@ class classifier_agent():
 
 
 
-class custom_feature_extractor(feature_extractor):
-    '''
-    This is a template for implementing more advanced feature extractor
-    '''
-    def __init__(self, vocab, tokenizer, other_inputs=None):
-        super().__init__(vocab, tokenizer)
-        # TODO ======================== YOUR CODE HERE =====================================
-        # Adding external inputs that need to be saved.
-        # TODO =============================================================================
+# class custom_feature_extractor(feature_extractor):
+#     '''
+#     This is a template for implementing more advanced feature extractor
+#     '''
+#     def __init__(self, vocab, tokenizer, other_inputs=None):
+#         super().__init__(vocab, tokenizer)
+#         # TODO ======================== YOUR CODE HERE =====================================
+#         # Adding external inputs that need to be saved.
+#         # TODO =============================================================================
 
-    def feature_map(self,sentence):
-        # -------- Your implementation of the advanced feature ---------------
-        # TODO ======================== YOUR CODE HERE =====================================
-        x = self.bag_of_word_feature(sentence)
-        # Implementing the advanced feature.
-        # TODO =============================================================================
-        return x
+#     def feature_map(self,sentence):
+#         # -------- Your implementation of the advanced feature ---------------
+#         # TODO ======================== YOUR CODE HERE =====================================
+#         x = self.bag_of_word_feature(sentence)
+#         # Implementing the advanced feature.
+#         # TODO =============================================================================
+#         return x
 
-    def __call__(self, sentence):
-        # If you don't edit anything you will use the standard bag of words feature
-        return self.feature_map(sentence)
+#     def __call__(self, sentence):
+#         # If you don't edit anything you will use the standard bag of words feature
+#         return self.feature_map(sentence)
 
 
 ## You are free to do anything you want for your feature engineering task
@@ -455,43 +482,43 @@ class custom_feature_extractor(feature_extractor):
 # scratch each time, e.g., the idf part of tf-idf should be computed once and stored as an attribute
 # of the feature extractor class
 
-def compute_twogram(train_sentences):
+# def compute_twogram(train_sentences):
 
-    from sklearn.feature_extraction.text import CountVectorizer
+#     from sklearn.feature_extraction.text import CountVectorizer
 
-    gram_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 2))
-    gram_vectorizer.fit(train_sentences)
-    return gram_vectorizer
+#     gram_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 2))
+#     gram_vectorizer.fit(train_sentences)
+#     return gram_vectorizer
 
 
-class custom_feature_extractor2(feature_extractor):
-    '''
-    This is a template for implementing more advanced feature extractor
+# class custom_feature_extractor2(feature_extractor):
+#     '''
+#     This is a template for implementing more advanced feature extractor
 
-    You my call it by, e.g.,
+#     You my call it by, e.g.,
 
-    twogram = compute_twogram(train_sentences)
-    custom_feat_map = custom_feature_extractor2(vocab,tokenizer,twogram)
+#     twogram = compute_twogram(train_sentences)
+#     custom_feat_map = custom_feature_extractor2(vocab,tokenizer,twogram)
 
-    # Notice that this might not even use our "vocab" or "tokenizer" at all and it is okay!
+#     # Notice that this might not even use our "vocab" or "tokenizer" at all and it is okay!
 
-    '''
-    def __init__(self, vocab, tokenizer, sklearn_transform):
-        super().__init__(vocab, tokenizer)
-        # TODO ======================== YOUR CODE HERE =====================================
-        # Adding external inputs that need to be saved.
-        self.ngram=sklearn_transform.transform
-        # TODO =============================================================================
+#     '''
+#     def __init__(self, vocab, tokenizer, sklearn_transform):
+#         super().__init__(vocab, tokenizer)
+#         # TODO ======================== YOUR CODE HERE =====================================
+#         # Adding external inputs that need to be saved.
+#         self.ngram=sklearn_transform.transform
+#         # TODO =============================================================================
 
-    def feature_map(self,sentence):
-        # -------- Your implementation of the advanced feature ---------------
-        # TODO ======================== YOUR CODE HERE =====================================
-        #x = self.bag_of_word_feature(sentence)
-        # Implementing the advanced feature.
-        x = self.ngram([sentence]).T
-        # TODO =============================================================================
-        return x
+#     def feature_map(self,sentence):
+#         # -------- Your implementation of the advanced feature ---------------
+#         # TODO ======================== YOUR CODE HERE =====================================
+#         #x = self.bag_of_word_feature(sentence)
+#         # Implementing the advanced feature.
+#         x = self.ngram([sentence]).T
+#         # TODO =============================================================================
+#         return x
 
-    def __call__(self, sentence):
+#     def __call__(self, sentence):
         # If you don't edit anything you will use the standard bag of words feature
-        return self.feature_map(sentence)
+        # return self.feature_map(sentence)
