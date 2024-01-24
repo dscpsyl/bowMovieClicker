@@ -170,7 +170,7 @@ class classifier_agent():
         #* Return the score vector
         return s
     
-    def predict(self, X, RAW_TEXT=False, RETURN_SCORE=False):
+    def predict(self, X, RAW_TEXT=False, RETURN_SCORE=False) -> np.array:
         '''
         This function makes a binary prediction or a numerical score
         :param X: d by m sparse (csc_array) matrix
@@ -201,10 +201,7 @@ class classifier_agent():
             
             return preds
 
-
-
-
-    def error(self, X, y, RAW_TEXT=False):
+    def error(self, X, y, RAW_TEXT=False) -> float:
         '''
         :param X: d by m sparse (csc_array) matrix
         :param y: m dimensional vector (numpy.array) of true labels
@@ -212,15 +209,26 @@ class classifier_agent():
                         and y is a list of true labels
         :return: The average error rate
         '''
+        #* The predicted results
+        results: np.array = np.zeros(shape=y.shape)
+        
+        #* If the input is raw text, then turn it into the predicted results
         if RAW_TEXT:
             X = self.batch_feat_map(X)
             y = np.array(y)
-
-        # TODO ======================== YOUR CODE HERE =====================================
-        # The function should work for any integer m > 0.
-        # You may wish to use self.predict
-        err =  0.0
-        # TODO =============================================================================
+            results = self.predict(X, RAW_TEXT=True)
+        else: # If the input is just the results, then use the input as the predicted results
+            results = X
+        
+        #? The error rate is (num_of_wrong_predictions / total_num_of_predictions)
+        
+        #* Calculate the error rate
+        wrongPredictions: float = 0.0
+        for i, pred in enumerate(results):
+            if pred != y[i]:
+                wrongPredictions += 1.0
+        
+        err: float = wrongPredictions / float(len(y))
 
         return err
 
