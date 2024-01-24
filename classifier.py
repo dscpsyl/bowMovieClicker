@@ -176,7 +176,8 @@ class classifier_agent():
         :param X: d by m sparse (csc_array) matrix
         :param RAW_TEXT: if True, then X is a list of text string
         :param RETURN_SCORE: If True, then return the score directly
-        :return:
+        :return: (prediction) 1 for positive and 0 for negative
+                (score) a float number for each prediction
         '''
         
         #* Turn the raw text into a feature matrix of the input is raw text
@@ -189,11 +190,16 @@ class classifier_agent():
         #* Score the feature matrix
         scores: np.array = self.score_function(X)
         
-
-        # Tip:   Read the required format of the predictions.
-
-
-        return preds
+        if RETURN_SCORE:
+            return scores
+        else:
+            for i, s in enumerate(scores):
+                if s > 0:
+                    preds[i] = 1
+                else:
+                    preds[i] = 0
+            
+            return preds
 
 
 
