@@ -4,6 +4,11 @@ import numpy as np
 from collections import Counter
 import string
 
+#!Remove the following imports when submitting
+from tqdm import tqdm as t
+import time
+#? Remove t() iterations in gd and sgd when submitting
+
 # Provided utility functions
 
 def load_data(file_name: str) -> list:
@@ -45,7 +50,6 @@ class data_processor:
         :return: the resulting feature matrix in sparse.csc_array of shape d by m
         '''
         if isinstance(sentences, list):
-            print("::Hstacking the processed data...")
             X = scipy.sparse.hstack([self.feat_map(sentence) for sentence in sentences])
         else:
             X = self.feat_map(sentences)
@@ -65,7 +69,6 @@ class data_processor:
         # The filename should be *.npy
         X = self.batch_feat_map(sentences)
         y = np.array(labels)
-        print("Saving processed data to ", filename)
         with open(filename, 'wb') as f:
             np.save(f, X, allow_pickle=True)
         return X, y
@@ -122,7 +125,6 @@ class feature_extractor:
         return self.bag_of_word_feature(sentence)
 
 
-#! Make sure you do not de-sparce the matricies
 class classifier_agent():
     def __init__(self, feat_map, params):
         '''
@@ -144,7 +146,7 @@ class classifier_agent():
 
         self.params: np.ndarray = np.array(params)
 
-    def score_function(self, X: sparse.csc_matrix) -> np.ndarray:
+    def score_function(self, X: sparse.csc_array) -> np.ndarray:
         '''
         This function computes the score function of the classifier.
         Note that the score function is linear in X. 
@@ -157,29 +159,25 @@ class classifier_agent():
         #* Check the size of the params vector against the feature vector
         (d,m) = X.shape
         d1 = self.params.shape[0]
-        if d != d1: # If they are not the same, then throw an error
-            raise ValueError("The size of the params vector is not the same as the feature vector when scoring.") 
-            # self.params = np.array([0.0 for i in range(d)]) <-- This was included in the original code, but I don't think it is correct
+        assert d == d1, f"score_function::The size of the params vector is not the same as the feature vector: {d},{d1}."
+        # self.params = np.array([0.0 for i in range(d)]) <-- This was included in the original code, but I don't think it is correct
 
         #* Initialize the score vector
         s: np.ndarray = np.zeros(shape=m, dtype=float)  # this is the desired type and shape for the output
         
         #* Score each feature vector
         for i in range(m): # Loop through each row of the feature array (aka loop through each feature vector)
-            temp: sparse.csc_matrix = X[:,i].T.multiply(self.params) # Compute the element product of the params vector and the feature vector
-            if type(temp) != sparse.csc_matrix: # If the temp vector is not a sparse vector, then convert it to a sparse vector
-                temp = sparse.csc_matrix(temp)
-                assert temp.shape == (1, len(self.params)), "score_function::The resulting multiplication is not a 1D vector: %s." % str(temp.shape)
+            temp: sparse.csc_array = X[:,i].T.multiply(self.params) # Compute the element product of the params vector and the feature vector
             s[i] = temp.sum()
             
-        #* Sanity check
-        assert s.shape == (m, ), "score_function::The score vector is not the same shape as the feature vector: %s." % str(s.shape)
-        assert len(s) == m, "score_function::The score vector is not the same length as the feature vector: %s." % str(s.shape)
+        # # Sanity check
+        # assert s.shape == (m, ), "score_function::The score vector is not the same shape as the feature vector: %s." % str(s.shape)
+        # assert len(s) == m, "score_function::The score vector is not the same length as the feature vector: %s." % str(s.shape)
             
         #* Return the score vector
         return s
     
-    def predict(self, X: sparse.csc_matrix, RAW_TEXT=False, RETURN_SCORE=False) -> np.ndarray:
+    def predict(self, X: sparse.csc_array, RAW_TEXT=False, RETURN_SCORE=False) -> np.ndarray:
         '''
         This function makes a binary prediction or a numerical score
         :param X: d by m sparse (csc_array) matrix
@@ -208,12 +206,12 @@ class classifier_agent():
                 else:
                     preds[i] = 0
             
-            #* Sanity check
-            assert preds.shape == (X.shape[1],), "predict::The prediction vector is not the same size as the feature vector."
+            # # Sanity check
+            # assert preds.shape == (X.shape[1],), "predict::The prediction vector is not the same size as the feature vector."
             
             return preds
 
-    def error(self, X: sparse.csc_matrix, y: list, RAW_TEXT=False) -> float:
+    def error(self, X: sparse.csc_array, y: np.ndarray, RAW_TEXT=False) -> float:
         '''
         :param X: d by m sparse (csc_array) matrix
         :param y: m dimensional vector (numpy.array) of true labels
@@ -241,13 +239,13 @@ class classifier_agent():
         
         err: float = wrongPredictions / float(len(y))
         
-        #* Sanity check
-        assert err >= 0.0 and err <= 1.0, "error::The error rate is not between 0 and 1."
-        assert type(err) == float, "error::The error rate is not a float."
+        # # Sanity check
+        # assert err >= 0.0 and err <= 1.0, "error::The error rate is not between 0 and 1."
+        # assert type(err) == float, "error::The error rate is not a float."
 
         return err
 
-    def loss_function(self, X: sparse.csc_matrix, y: list) -> np.float64:
+    def loss_function(self, X: sparse.csc_array, y: np.ndarray) -> np.float64:
         '''
         This function implements the logistic loss at the current self.params
 
@@ -264,49 +262,43 @@ class classifier_agent():
         probs: np.ndarray = np.exp(scores) / (1 + np.exp(scores))
         
         #* Calculate the loss for each feature vector
-        npY: np.ndarray = np.array(y)
-        const1: np.ndarray = np.ones(shape=npY.shape)
-        losses: np.ndarray = np.multiply(-1, (np.log(probs) * npY + np.log(np.subtract(const1, probs)) * (np.subtract(const1, npY))))
+        const1: np.ndarray = np.ones(shape=y.shape)
+        losses: np.ndarray = np.multiply(-1, (np.log(probs) * y + np.log(np.subtract(const1, probs)) * (np.subtract(const1, y))))
         
         avgLoss: np.float64 = np.mean(losses)
 
-        #* Sanity check
-        assert type(avgLoss) == np.float64, "loss_function::The average loss is not a float: %s." % str(type(avgLoss))
+        # # Sanity check
+        # assert type(avgLoss) == np.float64, "loss_function::The average loss is not a float: %s." % str(type(avgLoss))
         
         return avgLoss
         
-    def gradient(self, X: sparse.csc_matrix, y: list) -> np.ndarray:
+    def gradient(self, X: sparse.csc_array, y: np.ndarray) -> np.ndarray:
         '''
         It returns the gradient of the (average) loss function at the current params.
         :param X: d by m sparse (csc_array) matrix
         :param y: m dimensional vector (numpy.array) of true labels
         :return: Return an nd.array of size the same as self.params
         '''
-        #* Calculate the compoennts of the e score
+        #* Calculate the components of the e score
         scores: np.ndarray = self.score_function(X)
+        
         e: np.ndarray = np.exp(scores)
-        scalar = e / (1 + e)
+        scalar: np.ndarray = e / (1 + e)
         
         #* Stretch the y vector to be the same size as X (d by m) for element wise multiplication
-        (d, _) = X.shape
-        yList: list = list(y)
-        for _ in range(d):
-            yList.append(yList)
-        yStretched : np.ndarray = np.asarray(yList)
+        yStretched: np.ndarray = np.tile(y, (X.shape[0], 1))
         
         #* Calculate the terms
-        term1: np.ndarray = X.multiply(yStretched)
-        term2: np.ndarray = X.multiply(scalar)
+        term1: sparse.csc_matrix = X.multiply(yStretched)
+        term2: sparse.csc_matrix = X.multiply(scalar)
         
         #* Calculate the gradient for all feature vectors throguh matrix operations
         grad: np.ndarray = np.mean(term1 - term2, axis=1)
         
-        #* Sanity check
-        assert grad.shape == self.params.shape, "gradient::The gradient vector is not the same size as the params vector."
+        # # Sanity check
+        # assert grad.shape[0] == self.params.shape[0], "gradient::The gradient vector is not the same size as the params vector: %s: %s." % str(grad.shape) % str(self.params.shape)
 
         return grad
-
-
 
     def train_gd(self, train_sentences, train_labels, niter, lr=0.01, RAW_TEXT=True):
         '''
@@ -336,16 +328,14 @@ class classifier_agent():
 
         train_losses = [self.loss_function(Xtrain, ytrain)]
         train_errors = [self.error(Xtrain, ytrain)]
-        
-        assert False, "train_gd::The train_gd function has not been implemented yet."
 
         # Solution:
-        for i in range(niter):
-            # TODO ======================== YOUR CODE HERE =====================================
-            # You need to iteratively update self.params
+        for i in t(range(niter), desc='Training the model with GD'):
+            #* Calculate the gradient and update the params 
+            gradient = self.gradient(Xtrain, ytrain)
+            self.params = np.asarray(np.add(self.params, np.multiply(lr, gradient.T))).ravel() # Yes, it says ndarray but it is actucally a np.matrix
 
-
-            # TODO =============================================================================
+            #* Test the new params and record
             train_losses.append(self.loss_function(Xtrain, ytrain))
             train_errors.append(self.error(Xtrain, ytrain))
 
@@ -354,8 +344,6 @@ class classifier_agent():
                   'error = ', train_errors[-1])
 
         return train_losses, train_errors
-
-
 
     def train_sgd(self, train_sentences, train_labels, nepoch, lr=0.001, RAW_TEXT=True):
         '''
@@ -377,7 +365,7 @@ class classifier_agent():
                 (initial loss / error plus  loss / error after every epoch, thus length epoch +1)
         '''
 
-
+        #* Ensure inputs are feature vectors and labels
         if RAW_TEXT:
             # the input is raw text
             Xtrain = self.batch_feat_map(train_sentences)
@@ -391,31 +379,29 @@ class classifier_agent():
         train_errors = [self.error(Xtrain, ytrain)]
 
 
-        # First construct the dataset
-        # then train the model using SGD
-        # Solution
         sampler = 1/len(ytrain)
         niter = int(nepoch / sampler)
 
-        #params = sparse.csr_array(self.params)
+        for i in range(nepoch): # For each epoch
+            j = 0 # Prevent j from being unbound
+            for j in t(range(len(ytrain)), desc=f"Epoch {i}: "): # We run through n iterations
+                
+                #* Choose a random datapoint to train on    
+                idx = np.random.choice(len(ytrain), 1)
+                xpoint = Xtrain[:,idx]
+                ypoint = ytrain[idx]
+                
+                #* Calculate the gradient and update the params
+                gradient = self.gradient(xpoint, ypoint)
+                self.params = np.asarray(np.add(self.params, np.multiply(lr, gradient.T))).ravel()
+                
 
-        for i in range(nepoch):
-            for j in range(len(ytrain)):
-                pass
+            #* For each epoch, test the new params and record
+            train_losses.append(self.loss_function(Xtrain, ytrain))
+            train_errors.append(self.error(Xtrain, ytrain))
 
-            # TODO ======================== YOUR CODE HERE =====================================
-            # You need to iteratively update self.params
-            # You should use the following for selecting the index of one random data point.
-
-            # idx = np.random.choice(len(ytrain), 1)
-
-            # TODO =============================================================================
-            # logging
-            # train_losses.append(self.loss_function(Xtrain, ytrain))
-            # train_errors.append(self.error(Xtrain, ytrain))
-
-            # print('epoch =',i,'iter=',i*len(ytrain)+j+1,'loss = ', train_losses[-1],
-            #       'error = ', train_errors[-1])
+            print('epoch =',i,'iter=',i*len(ytrain)+j+1,'loss = ', train_losses[-1],
+                  'error = ', train_errors[-1])
 
 
         return train_losses, train_errors

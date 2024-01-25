@@ -3,6 +3,8 @@ from classifier import classifier_agent
 
 import numpy as np
 
+import sys
+
 
 def main():
     print("Creating a classifier agent:")
@@ -31,40 +33,60 @@ def main():
 
     print("Processing data and feature extraction...")
     text2feat = data_processor(feat_map)
-    # Xtrain, ytrain = text2feat.process_data_and_save_as_file(train_sentences, train_labels, "train_data.npy")
+    
+    if(sys.argv[1] == "-l"):
+        print("::Loading the saved Xtrain instead of reprocessing the data")
+        Xtrain = text2feat.load_data_from_file("train_data.npy")
+        ytrain = np.asarray(train_labels)
+    else:
+        print("::No option selected. Reprocessing the data. (Use -l to load the saved Xtrain)")
+        Xtrain, ytrain = text2feat.process_data_and_save_as_file(train_sentences, train_labels, "train_data.npy")
 
-    print("::Loading the saved Xtrain instead of reprocessing the data")
-    Xtrain = text2feat.load_data_from_file("train_data.npy")
-    ytrain = train_labels
     
 
-
-
-    # train with GD
-    niter = 1000
-    print("Training using GD for ", niter, "iterations.")
-    d = len(vocab_list)
-    params = np.array([0.0 for i in range(d)])
-    classifier1 = classifier_agent(feat_map,params)
-    classifier1.train_gd(Xtrain,ytrain,niter,0.01,RAW_TEXT=False)
-
-
-
-
-    # train with SGD
-    nepoch = 10
-    print("Training using SGD for ", nepoch, "data passes.")
-    d = len(vocab_list)
-    params = np.array([0.0 for i in range(d)])
-    classifier2 = classifier_agent(feat_map, params)
-    classifier2.train_sgd(Xtrain, ytrain, nepoch, 0.001,RAW_TEXT=False)
-
-
-    err1 = classifier1.eval_model(test_sentences,test_labels)
-    err2 = classifier2.eval_model(test_sentences,test_labels)
-
-    print('GD: test err = ', err1,
-          'SGD: test err = ', err2)
+    if(sys.argv[2] == "-g"):
+        print("-g flag recieved. Training with gradient descent")
+        niter = 1000
+        print("::Training using GD for", niter, "iterations.")
+        d = len(vocab_list)
+        params = np.array([0.0 for _ in range(d)])
+        classifier1 = classifier_agent(feat_map,params)
+        classifier1.train_gd(Xtrain,ytrain,niter,0.01,RAW_TEXT=False)
+        
+        err1 = classifier1.eval_model(test_sentences,test_labels)
+        print("GD: test err =", err1)
+    elif(sys.argv[2] == "-s"):
+        print("-s flag recieved. Training with stochastic gradient descent")
+        nepoch = 10
+        print("Training using SGD for ", nepoch, "data passes (epochs).")
+        d = len(vocab_list)
+        params = np.array([0.0 for i in range(d)])
+        classifier2 = classifier_agent(feat_map, params)
+        classifier2.train_sgd(Xtrain, ytrain, nepoch, 0.001,RAW_TEXT=False)
+        
+        err2 = classifier2.eval_model(test_sentences,test_labels)
+        print("SGD: test err =", err2)
+    elif(sys.argv[2] == "-b"):
+        print("-b flag recieved. Training with both gradient descent and stochastic")
+        niter = 1000
+        print("::Training using GD for", niter, "iterations.")
+        d = len(vocab_list)
+        params = np.array([0.0 for _ in range(d)])
+        classifier1 = classifier_agent(feat_map,params)
+        classifier1.train_gd(Xtrain,ytrain,niter,0.01,RAW_TEXT=False)
+        
+        err1 = classifier1.eval_model(test_sentences,test_labels)
+        
+        nepoch = 10
+        print("Training using SGD for", nepoch, "data passes (epochs).")
+        d = len(vocab_list)
+        params = np.array([0.0 for i in range(d)])
+        classifier2 = classifier_agent(feat_map, params)
+        classifier2.train_sgd(Xtrain, ytrain, nepoch, 0.001,RAW_TEXT=False)
+        
+        err2 = classifier2.eval_model(test_sentences,test_labels)
+        print('GD: test err = ', err1)
+        print('SGD: test err = ', err2)
 
 
 if __name__ == "__main__":
