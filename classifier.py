@@ -4,11 +4,6 @@ import numpy as np
 from collections import Counter
 import string
 
-#!Remove the following imports when submitting
-from tqdm import tqdm as t
-import time
-#? Remove t() iterations in gd and sgd when submitting
-
 # Provided utility functions
 
 def load_data(file_name: str) -> list:
@@ -177,7 +172,7 @@ class classifier_agent():
         #* Return the score vector
         return s
     
-    def predict(self, X: sparse.csc_array, RAW_TEXT=False, RETURN_SCORE=False) -> np.ndarray:
+    def predict(self, X, RAW_TEXT=False, RETURN_SCORE=False) -> np.ndarray:
         '''
         This function makes a binary prediction or a numerical score
         :param X: d by m sparse (csc_array) matrix
@@ -211,7 +206,7 @@ class classifier_agent():
             
             return preds
 
-    def error(self, X: sparse.csc_array, y: np.ndarray, RAW_TEXT=False) -> float:
+    def error(self, X, y: np.ndarray, RAW_TEXT=False) -> float:
         '''
         :param X: d by m sparse (csc_array) matrix
         :param y: m dimensional vector (numpy.array) of true labels
@@ -330,7 +325,7 @@ class classifier_agent():
         train_errors = [self.error(Xtrain, ytrain)]
 
         # Solution:
-        for i in t(range(niter), desc='Training the model with GD'):
+        for i in range(niter):
             #* Calculate the gradient and update the params 
             gradient = self.gradient(Xtrain, ytrain)
             self.params = np.asarray(np.add(self.params, np.multiply(lr, gradient.T))).ravel() # Yes, it says ndarray but it is actucally a np.matrix
@@ -339,9 +334,9 @@ class classifier_agent():
             train_losses.append(self.loss_function(Xtrain, ytrain))
             train_errors.append(self.error(Xtrain, ytrain))
 
-            if i%100 == 0:
-                print('iter =',i,'loss = ', train_losses[-1],
-                  'error = ', train_errors[-1])
+            # if i%100 == 0:
+            #     print('iter =',i,'loss = ', train_losses[-1],
+            #       'error = ', train_errors[-1])
 
         return train_losses, train_errors
 
@@ -384,7 +379,7 @@ class classifier_agent():
 
         for i in range(nepoch): # For each epoch
             j = 0 # Prevent j from being unbound
-            for j in t(range(len(ytrain)), desc=f"Epoch {i}: "): # We run through n iterations
+            for j in range(len(ytrain)): # We run through n iterations
                 
                 #* Choose a random datapoint to train on    
                 idx = np.random.choice(len(ytrain), 1)
@@ -400,8 +395,8 @@ class classifier_agent():
             train_losses.append(self.loss_function(Xtrain, ytrain))
             train_errors.append(self.error(Xtrain, ytrain))
 
-            print('epoch =',i,'iter=',i*len(ytrain)+j+1,'loss = ', train_losses[-1],
-                  'error = ', train_errors[-1])
+            # print('epoch =',i,'iter=',i*len(ytrain)+j+1,'loss = ', train_losses[-1],
+            #       'error = ', train_errors[-1])
 
 
         return train_losses, train_errors
