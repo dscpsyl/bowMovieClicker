@@ -9,12 +9,6 @@ from tqdm import tqdm as t
 import sys
 import time
 
-plt.style.context("dark_background")
-fig = plt.figure()
-gd_eve = fig.add_subplot(221)
-gd_evt = fig.add_subplot(222)
-sgd_eve = fig.add_subplot(223)
-sgd_evt = fig.add_subplot(224)
 
 def main():
     print("Creating a classifier agent:")
@@ -121,6 +115,13 @@ def main():
             _sgd_err[i] = terr[-1]
             
         #* Plotting
+        plt.style.use("dark_background")
+        fig = plt.figure()
+        gd_eve = fig.add_subplot(221)
+        gd_evt = fig.add_subplot(222)
+        sgd_eve = fig.add_subplot(223)
+        sgd_evt = fig.add_subplot(224)
+
         print("Plotting the results...")
         gd_eve.plot(_gd_epoch, _gd_err, color="red")
         gd_eve.set_title("GD: Epoch (1000) vs Training Error")
@@ -142,7 +143,9 @@ def main():
         sgd_evt.set_xlabel("Time (s)")
         sgd_evt.set_ylabel("Error (%)")
         
-        fig.savefig("results.png", pad_inches=0.1)
+        fig.tight_layout()
+        
+        fig.savefig("Images/results.png", pad_inches=0.1)
         
         
 
