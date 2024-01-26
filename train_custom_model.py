@@ -1,9 +1,13 @@
-from classifier import load_data,tokenize, data_processor
-from classifier import custom_feature_extractor, classifier_agent
-from classifier import compute_twogram, custom_feature_extractor2
+from classifier import load_data, tokenize, data_processor
+from classifier import classifier_agent
+from classifier import custom_feature_extractor
 
 
 import numpy as np
+import matplotlib.pyplot as plt
+
+from tqdm import tqdm as t
+from time import time
 
 
 def main():
@@ -24,73 +28,63 @@ def main():
     train_labels = [1 for i in range(len(sentences_pos))] + [0 for i in range(len(sentences_neg))]
 
     sentences_pos = load_data("data/test_pos_public.txt")
-    sentences_neg = load_data("data/test_neg_public.txt")
-    # sentences_pos = load_data("../FullData/test_pos_private.txt")
-    # sentences_neg = load_data("../FullData/test_neg_private.txt")
     test_sentences = sentences_pos + sentences_neg
-    test_labels = [1 for i in range(len(sentences_pos))] + [0 for i in range(len(sentences_neg))]
-
-
-
-    # TODO: ====================== Your code here ====================
+    test_labels = [1 for i in range(len(sentences_pos))] + [0 for i in range(len(sentences_neg))]   
 
     feat_map = custom_feature_extractor(vocab_list, tokenize)
-    # You many replace this with a different feature extractor
-
-    # sklearn_obj = compute_twogram(train_sentences)
-    # feat_map = custom_feature_extractor2(vocab_list,tokenize,sklearn_obj)
-
-    def MyFeatureMap(sentence):
-        return feat_map(sentence)
-
-    # TODO: ==========================================================
-
-
 
     # Preprocess the training data into features
-
-    text2feat = data_processor(MyFeatureMap)
+    text2feat = data_processor(feat_map)
+    
     Xtrain, ytrain = text2feat.process_data_and_save_as_file(train_sentences, train_labels,
                                             "custom_feat_train.npy")
-
-
-    Xtest, ytest = text2feat.process_data_and_save_as_file(test_sentences,test_labels,
+    _, _ = text2feat.process_data_and_save_as_file(test_sentences,test_labels,
                                             "custom_feat_test.npy")
-    # "custom_feat_test.npy" should be submitted to gradescope
-
-    #Xtest = text2feat.load_data_from_file("custom_feat_test.npy")
-
 
 
     # train with SGD
-    nepoch = 3
-    print("Training using SGD for ", nepoch, "data passes.")
+    _NEPOCH = 10
     d = len(vocab_list)
+    params = np.array([0.0 for _ in range(d)])
+    custom_classifier = classifier_agent(feat_map, params)
+    
+    _cc_epoch = np.array([i for i in range(1, _NEPOCH+1)])
+    
+    _cc_err = np.zeros(_NEPOCH, dtype=np.float64)
 
-    params = np.array([0.0 for i in range(d)])
-    custom_classifier = classifier_agent(MyFeatureMap, params)
+    _cc_time = np.zeros(_NEPOCH, dtype=np.float64)    
+    
 
-    # TODO: ====================== Feel free to tweak how it is trained here====================
-    custom_classifier.train_sgd(Xtrain, ytrain, nepoch,0.01, RAW_TEXT = False)
+    
+    for i in t(range(_NEPOCH), desc= "Training with custom feature extractor"):
+        sTime = time()
+        custom_classifier.train_sgd(Xtrain, ytrain, i, 0.01, RAW_TEXT = False)
+        _cc_time[i] = time() - sTime
+        _cc_err[i] = custom_classifier.eval_model(test_sentences,test_labels)
+    
 
-    ## Hint:
-    # - if you use tf-idf then the appropriate scale of the learning rate might be a lot bigger
-    #   due to normalization.
+    print("Saving the model to a file...")
+    custom_classifier.save_params_to_file('custom_model.npy')
+    
+    print("Creating analysis graphs...")
+    plt.style.use("dark_background")
+    fig = plt.figure()
+    cc_eve = fig.add_subplot(121)
+    cc_evt = fig.add_subplot(122)
+    
+    cc_eve.plot(_cc_epoch, _cc_err, color="red")
+    cc_eve.set_title("CC: Epoch (1000) vs Training Error")
+    cc_eve.set_xlabel("Epochs")
+    cc_eve.set_ylabel("Error (%)")
+    
+    cc_evt.plot(_cc_time, _cc_err, color="red")
+    cc_evt.set_title("CC: Time vs Training Error")
+    cc_evt.set_xlabel("Time (s)")
+    cc_evt.set_ylabel("Error (%)")
 
-    #custom_classifier.train_sgd(train_sentences, train_labels, nepoch, 0.001)
-
-    #niter = 2000
-    #custom_classifier.train_gd(train_sentences, train_labels, niter, 100.0)
-
-    err = custom_classifier.eval_model(test_sentences,test_labels)
-
-    print("Test error =  ", err)
-
-    custom_classifier.save_params_to_file('best_model.npy')
-
-
-    # You will need to submit "best_model.npy" and "custom_feat_test.npy"
-
+    fig.tight_layout()
+        
+    fig.savefig("Images/cc_results.png", pad_inches=0.1)
 
 
 if __name__ == "__main__":
