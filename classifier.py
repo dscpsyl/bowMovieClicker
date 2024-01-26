@@ -119,6 +119,28 @@ class feature_extractor:
         # This function makes this any instance of this python class a callable object
         return self.bag_of_word_feature(sentence)
 
+class custom_feature_extractor(feature_extractor):
+    '''
+    This is a template for implementing more advanced feature extractor
+    '''
+    def __init__(self, vocab, tokenizer, other_inputs=None):
+        super().__init__(vocab, tokenizer)
+        # TODO ======================== YOUR CODE HERE =====================================
+        # Adding external inputs that need to be saved.
+        # TODO =============================================================================
+
+    def feature_map(self,sentence):
+        # -------- Your implementation of the advanced feature ---------------
+        # TODO ======================== YOUR CODE HERE =====================================
+        x = self.bag_of_word_feature(sentence)
+        # Implementing the advanced feature.
+        # TODO =============================================================================
+        return x
+
+    def __call__(self, sentence):
+        # If you don't edit anything you will use the standard bag of words feature
+        return self.feature_map(sentence)
+
 
 class classifier_agent():
     def __init__(self, feat_map, params):
@@ -401,7 +423,6 @@ class classifier_agent():
 
         return train_losses, train_errors
 
-
     def eval_model(self, test_sentences, test_labels, RAW_TEXT=True):
         '''
         This function evaluates the classifier agent via new labeled examples.
@@ -432,84 +453,3 @@ class classifier_agent():
     def load_params_from_file(self, filename):
         with open(filename, 'rb') as f:
             self.params = np.load(f)
-
-
-
-
-
-# class custom_feature_extractor(feature_extractor):
-#     '''
-#     This is a template for implementing more advanced feature extractor
-#     '''
-#     def __init__(self, vocab, tokenizer, other_inputs=None):
-#         super().__init__(vocab, tokenizer)
-#         # TODO ======================== YOUR CODE HERE =====================================
-#         # Adding external inputs that need to be saved.
-#         # TODO =============================================================================
-
-#     def feature_map(self,sentence):
-#         # -------- Your implementation of the advanced feature ---------------
-#         # TODO ======================== YOUR CODE HERE =====================================
-#         x = self.bag_of_word_feature(sentence)
-#         # Implementing the advanced feature.
-#         # TODO =============================================================================
-#         return x
-
-#     def __call__(self, sentence):
-#         # If you don't edit anything you will use the standard bag of words feature
-#         return self.feature_map(sentence)
-
-
-## You are free to do anything you want for your feature engineering task
-# And you can use any external package for the task
-## Some ideas (read about them!):
-#  1. n-grams   2. Removing "Stop words"  3.  tf-idf  4. word2vec
-# 5. pre-trained embedding using e.g., Bert.
-
-# An example on how to construct an off-the-shelf 2-gram feature extractor is provided below.
-
-
-# Some of these may need some data-structure to be set up and stored, rather than computing from
-# scratch each time, e.g., the idf part of tf-idf should be computed once and stored as an attribute
-# of the feature extractor class
-
-# def compute_twogram(train_sentences):
-
-#     from sklearn.feature_extraction.text import CountVectorizer
-
-#     gram_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 2))
-#     gram_vectorizer.fit(train_sentences)
-#     return gram_vectorizer
-
-
-# class custom_feature_extractor2(feature_extractor):
-#     '''
-#     This is a template for implementing more advanced feature extractor
-
-#     You my call it by, e.g.,
-
-#     twogram = compute_twogram(train_sentences)
-#     custom_feat_map = custom_feature_extractor2(vocab,tokenizer,twogram)
-
-#     # Notice that this might not even use our "vocab" or "tokenizer" at all and it is okay!
-
-#     '''
-#     def __init__(self, vocab, tokenizer, sklearn_transform):
-#         super().__init__(vocab, tokenizer)
-#         # TODO ======================== YOUR CODE HERE =====================================
-#         # Adding external inputs that need to be saved.
-#         self.ngram=sklearn_transform.transform
-#         # TODO =============================================================================
-
-#     def feature_map(self,sentence):
-#         # -------- Your implementation of the advanced feature ---------------
-#         # TODO ======================== YOUR CODE HERE =====================================
-#         #x = self.bag_of_word_feature(sentence)
-#         # Implementing the advanced feature.
-#         x = self.ngram([sentence]).T
-#         # TODO =============================================================================
-#         return x
-
-#     def __call__(self, sentence):
-        # If you don't edit anything you will use the standard bag of words feature
-        # return self.feature_map(sentence)
