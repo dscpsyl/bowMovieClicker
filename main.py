@@ -30,7 +30,7 @@ def main():
     sentences_pos = load_data("data/test_pos_public.txt")
     sentences_neg = load_data("data/test_neg_public.txt")
     test_sentences = sentences_pos + sentences_neg
-    test_labels = [1 for i in range(len(sentences_pos))] + [0 for i in range(len(sentences_neg))]
+    test_labels = [1 for _ in range(len(sentences_pos))] + [0 for i in range(len(sentences_neg))]
 
     print("Creeating feature map...")
     feat_map = feature_extractor(vocab_list, tokenize) # You many replace this with a different feature extractor
