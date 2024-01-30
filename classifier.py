@@ -119,27 +119,27 @@ class feature_extractor:
         # This function makes this any instance of this python class a callable object
         return self.bag_of_word_feature(sentence)
 
-class custom_feature_extractor(feature_extractor):
-    '''
-    This is a template for implementing more advanced feature extractor
-    '''
-    def __init__(self, vocab, tokenizer, other_inputs=None):
-        super().__init__(vocab, tokenizer)
-        # TODO ======================== YOUR CODE HERE =====================================
-        # Adding external inputs that need to be saved.
-        # TODO =============================================================================
+# class custom_feature_extractor(feature_extractor):
+#     '''
+#     This is a template for implementing more advanced feature extractor
+#     '''
+#     def __init__(self, vocab, tokenizer, other_inputs=None):
+#         super().__init__(vocab, tokenizer)
+#         # TODO ======================== YOUR CODE HERE =====================================
+#         # Adding external inputs that need to be saved.
+#         # TODO =============================================================================
 
-    def feature_map(self,sentence):
-        # -------- Your implementation of the advanced feature ---------------
-        # TODO ======================== YOUR CODE HERE =====================================
-        x = self.bag_of_word_feature(sentence)
-        # Implementing the advanced feature.
-        # TODO =============================================================================
-        return x
+#     def feature_map(self,sentence):
+#         # -------- Your implementation of the advanced feature ---------------
+#         # TODO ======================== YOUR CODE HERE =====================================
+#         x = self.bag_of_word_feature(sentence)
+#         # Implementing the advanced feature.
+#         # TODO =============================================================================
+#         return x
 
-    def __call__(self, sentence):
-        # If you don't edit anything you will use the standard bag of words feature
-        return self.feature_map(sentence)
+#     def __call__(self, sentence):
+#         # If you don't edit anything you will use the standard bag of words feature
+#         return self.feature_map(sentence)
 
 
 class classifier_agent():
@@ -184,7 +184,7 @@ class classifier_agent():
         
         #* Score each feature vector
         for i in range(m): # Loop through each row of the feature array (aka loop through each feature vector)
-            temp: sparse.csc_array = X[:,i].T.multiply(self.params) # Compute the element product of the params vector and the feature vector
+            temp: sparse.csc_array = X[:,i].T.dot(self.params) # Compute the element product of the params vector and the feature vector
             s[i] = temp.sum()
             
         # # Sanity check
@@ -250,8 +250,8 @@ class classifier_agent():
         
         #* Calculate the error rate
         wrongPredictions: float = 0.0
-        for i, pred in enumerate(results):
-            if pred != y[i]:
+        for pred, actual in zip(results, y):
+            if pred != actual:
                 wrongPredictions += 1.0
         
         err: float = wrongPredictions / float(len(y))
