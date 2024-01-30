@@ -275,12 +275,24 @@ class classifier_agent():
         #* Calculate the score for each feature vector
         scores: np.ndarray = self.score_function(X)
         
-        #* Convert the scores into probabilities
-        probs: np.ndarray = np.exp(scores) / (1 + np.exp(scores))
+        # #* Convert the scores into probabilities
+        # probs: np.ndarray = np.exp(scores) / (1 + np.exp(scores))
+        
+        # #* Calculate the loss for each feature vector
+        # const1: np.ndarray = np.ones(shape=y.shape)
+        # losses: np.ndarray = np.multiply(-1, (np.log(probs) * y + np.log(np.subtract(const1, probs)) * (np.subtract(const1, y))))
+        
+        #* Intermediate step to find log(hat(p)) and calculate the terms
+        log_probs: np.ndarray = np.negative(np.logaddexp(0, scores))
+        const1: np.ndarray = np.ones(shape=y.shape)
+        
+        log_probs1: np.ndarray = scores - log_probs
+        term1: np.ndarray = log_probs1.dot(y)
+        
+        term2: np.ndarray = log_probs.dot(np.subtract(const1, y))
         
         #* Calculate the loss for each feature vector
-        const1: np.ndarray = np.ones(shape=y.shape)
-        losses: np.ndarray = np.multiply(-1, (np.log(probs) * y + np.log(np.subtract(const1, probs)) * (np.subtract(const1, y))))
+        losses: np.ndarray = np.subtract(term1, term2)
         
         avgLoss: np.float64 = np.mean(losses)
 
