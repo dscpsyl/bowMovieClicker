@@ -50,12 +50,13 @@ def main():
 
     if(sys.argv[2] == "-g"):
         print("-g flag recieved. Training with gradient descent")
-        niter = 1000
-        print("::Training using GD for", niter, "iterations.")
+        _NITER = 1000
+        
         d = len(vocab_list)
         params = np.array([0.0 for _ in range(d)])
         classifier1 = classifier_agent(feat_map,params)
-        classifier1.train_gd(Xtrain,ytrain,niter,0.01,RAW_TEXT=False)
+        for i in t(range(_NITER), desc= f"Training using DG for {_NITER} iterations"):
+            classifier1.train_gd(Xtrain,ytrain,1,0.01,RAW_TEXT=False)
         
         err1 = classifier1.eval_model(test_sentences,test_labels)
         print("GD: test err =", err1)
@@ -65,12 +66,14 @@ def main():
         
     elif(sys.argv[2] == "-s"):
         print("-s flag recieved. Training with stochastic gradient descent")
-        nepoch = 10
-        print("Training using SGD for ", nepoch, "data passes (epochs).")
+        _NEPOCH = 10
+        
         d = len(vocab_list)
         params = np.array([0.0 for i in range(d)])
         classifier2 = classifier_agent(feat_map, params)
-        classifier2.train_sgd(Xtrain, ytrain, nepoch, 0.001,RAW_TEXT=False)
+        
+        for i in t(range(_NEPOCH), desc= f"Training using SGD for {_NEPOCH} data passes (epochs)."): 
+            classifier2.train_sgd(Xtrain, ytrain, 1, 0.001,RAW_TEXT=False)
         
         err2 = classifier2.eval_model(test_sentences,test_labels)
         print("SGD: test err =", err2)
