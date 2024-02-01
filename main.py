@@ -13,14 +13,14 @@ import time
 def main():
     print("Creating a classifier agent:")
 
-    with open('data/vocab.txt') as file:
+    with open('data/vocab_public.txt') as file:
         reading = file.readlines()
         vocab_list = [item.strip() for item in reading]
         vocab_dict = {item: i for i, item in enumerate(vocab_list)}
 
     print("Loading data...")
-    sentences_pos = load_data("data/training_pos.txt")
-    sentences_neg = load_data("data/training_neg.txt")
+    sentences_pos = load_data("data/training_pos_public.txt")
+    sentences_neg = load_data("data/training_neg_public.txt")
 
     print("Creating training and test data...")
     train_sentences = sentences_pos + sentences_neg
