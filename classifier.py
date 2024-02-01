@@ -185,10 +185,9 @@ class classifier_agent():
         s: np.ndarray = np.zeros(shape=m, dtype=float)  # this is the desired type and shape for the output
         
         #* Score each feature vector
-        for i in range(m): # Loop through each row of the feature array (aka loop through each feature vector)
-            temp: sparse.csc_array = X[:,[i]].T.dot(self.params) # Compute the element product of the params vector and the feature vector
-            s[i] = temp.sum()
-            
+        if type(X) != scipy.sparse.csc.csc_matrix:
+            X = sparse.csc_array(X)
+        s = X.T.multiply(self.params).sum(axis=1) # This is the same as the commented out code above, but it is more efficient
         # # Sanity check
         # assert s.shape == (m, ), "score_function::The score vector is not the same shape as the feature vector: %s." % str(s.shape)
         # assert len(s) == m, "score_function::The score vector is not the same length as the feature vector: %s." % str(s.shape)
@@ -219,11 +218,7 @@ class classifier_agent():
         if RETURN_SCORE:
             return scores # Sanity check not needed as the score function already has a sanity check
         else:
-            for i, s in enumerate(scores):
-                if s > 0:
-                    preds[i] = 1
-                else:
-                    preds[i] = 0
+            preds = np.clip(scores, 0, 1)
             
             # # Sanity check
             # assert preds.shape == (X.shape[1],), "predict::The prediction vector is not the same size as the feature vector."
