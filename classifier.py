@@ -78,7 +78,7 @@ class feature_extractor:
         self.vocab_dict = {item: i for i, item in enumerate(vocab)}  # This constructs a word 2 index dictionary
         self.d = len(vocab)
 
-    def bag_of_word_feature(self, sentence: list) -> sparse.csc_matrix:
+    def bag_of_word_feature(self, sentence: str) -> sparse.csc_array:
         '''
         Bag of word feature extactor. Reminder: The 
         `vocab_dict` has the following format:
@@ -97,7 +97,7 @@ class feature_extractor:
         wordCount: dict = Counter(wordList)
         
         #* Create the lil vector with the len of the different words in the sentence
-        t: sparse.lil_matrix = sparse.lil_matrix((self.d, 1), dtype=np.int64) 
+        t: sparse.lil_array = sparse.lil_array((self.d, 1), dtype=np.int64) 
         
         #* Populate the sparse vector with the count of each word in the sentence
         for word, count in wordCount.items():
@@ -107,7 +107,7 @@ class feature_extractor:
                 t[self.vocab_dict[word], 0] = count
         
         #* Convert the lil vector to a csc vector
-        x: sparse.csc_matrix = t.tocsc()
+        x: sparse.csc_array = t.tocsc()
         
         #* Sanity check
         assert x.shape == (self.d, 1), "bag_of_word_feature::The shape of the sparse vector is not the same as the vocab list: %s." % str(x.shape)
@@ -176,7 +176,9 @@ class classifier_agent():
         #* Check the size of the params vector against the feature vector
         (d,m) = X.shape
         d1 = self.params.shape[0]
-        assert d == d1, f"score_function::The size of the params vector is not the same as the feature vector: {d},{d1}."
+        if d != d1:
+            self.params = np.array([0.0 for i in range(d)])
+        # assert d == d1, f"score_function::The size of the params vector is not the same as the feature vector: {d},{d1}."
         # self.params = np.array([0.0 for i in range(d)]) <-- This was included in the original code, but I don't think it is correct
 
         #* Initialize the score vector
@@ -184,7 +186,7 @@ class classifier_agent():
         
         #* Score each feature vector
         for i in range(m): # Loop through each row of the feature array (aka loop through each feature vector)
-            temp: sparse.csc_array = X[:,i].T.dot(self.params) # Compute the element product of the params vector and the feature vector
+            temp: sparse.csc_array = X[:,[i]].T.dot(self.params) # Compute the element product of the params vector and the feature vector
             s[i] = temp.sum()
             
         # # Sanity check
@@ -242,7 +244,7 @@ class classifier_agent():
         #* If the input is raw text, then turn it into the predicted results
         if RAW_TEXT:
             X = self.batch_feat_map(X)
-            results = self.predict(X, RAW_TEXT=True)
+            results = self.predict(X, RAW_TEXT=False)
         else: # If the input is just the results, then use the input as the predicted results
             results = self.predict(X)
         
@@ -274,26 +276,26 @@ class classifier_agent():
 
         #* Calculate the score for each feature vector
         scores: np.ndarray = self.score_function(X)
+    
+        #* Calculate log(hat(p))    
+        m: np.ndarray = np.array(scores, copy=True)
+        m[m < 0] = 0
+        _sub: np.ndarray = np.add(m, np.logaddexp(np.subtract(np.zeros(shape=m.shape), m), np.subtract(scores, m)))
+        log_p: np.ndarray = np.subtract(scores, _sub)
         
-        # #* Convert the scores into probabilities
-        # probs: np.ndarray = np.exp(scores) / (1 + np.exp(scores))
+        #* Term 1
+        term1: np.ndarray = np.negative(np.multiply(log_p, y))
         
-        # #* Calculate the loss for each feature vector
-        # const1: np.ndarray = np.ones(shape=y.shape)
-        # losses: np.ndarray = np.multiply(-1, (np.log(probs) * y + np.log(np.subtract(const1, probs)) * (np.subtract(const1, y))))
+        #* Calculate log(1 - hat(p))
+        log_nP: np.ndarray = np.negative(_sub)
         
-        #* Intermediate step to find log(hat(p)) and calculate the terms
-        log_probs: np.ndarray = np.negative(np.logaddexp(0, scores))
-        const1: np.ndarray = np.ones(shape=y.shape)
+        #* Term 2
+        term2: np.ndarray = np.multiply(np.subtract(np.ones(shape=y.shape), y), log_nP)
         
-        log_probs1: np.ndarray = scores - log_probs
-        term1: np.ndarray = log_probs1.dot(y)
-        
-        term2: np.ndarray = log_probs.dot(np.subtract(const1, y))
-        
-        #* Calculate the loss for each feature vector
+        #* Combine to the loss
         losses: np.ndarray = np.subtract(term1, term2)
         
+        #* Calculate the average loss
         avgLoss: np.float64 = np.mean(losses)
 
         # # Sanity check
@@ -311,22 +313,18 @@ class classifier_agent():
         #* Calculate the components of the e score
         scores: np.ndarray = self.score_function(X)
         
-        e: np.ndarray = np.exp(scores)
-        scalar: np.ndarray = e / (1 + e)
+        #* Define the constants
+        _ones = np.ones(shape=y.shape)
         
-        #* Stretch the y vector to be the same size as X (d by m) for element wise multiplication
-        yStretched: np.ndarray = np.tile(y, (X.shape[0], 1))
+        #* Calculate the terms inside to out
+        _c =np.subtract(np.divide(np.exp(scores), np.add(np.exp(scores), _ones)), y)
+        grad = X.multiply(_c)
         
-        #* Calculate the terms
-        term1: sparse.csc_matrix = X.multiply(yStretched)
-        term2: sparse.csc_matrix = X.multiply(scalar)
-        
-        #* Calculate the gradient for all feature vectors throguh matrix operations
-        grad: np.ndarray = np.mean(term1 - term2, axis=1)
+        #* Calculate the mean gradient
+        grad = np.array(grad.mean(axis=1)).flatten()
         
         # # Sanity check
         # assert grad.shape[0] == self.params.shape[0], "gradient::The gradient vector is not the same size as the params vector: %s: %s." % str(grad.shape) % str(self.params.shape)
-
         return grad
 
     def train_gd(self, train_sentences, train_labels, niter, lr=0.01, RAW_TEXT=True):
@@ -362,7 +360,7 @@ class classifier_agent():
         for i in range(niter):
             #* Calculate the gradient and update the params 
             gradient = self.gradient(Xtrain, ytrain)
-            self.params = np.asarray(np.add(self.params, np.multiply(lr, gradient.T))).ravel() # Yes, it says ndarray but it is actucally a np.matrix
+            self.params = np.asarray(np.subtract(self.params, np.multiply(lr, gradient.T))).flatten() # Yes, it says ndarray but it is actucally a np.matrix
 
             #* Test the new params and record
             train_losses.append(self.loss_function(Xtrain, ytrain))
@@ -411,9 +409,8 @@ class classifier_agent():
         sampler = 1/len(ytrain)
         niter = int(nepoch / sampler)
 
-        for i in range(nepoch): # For each epoch
-            j = 0 # Prevent j from being unbound
-            for j in range(len(ytrain)): # We run through n iterations
+        for _ in range(nepoch): # For each epoch
+            for _ in range(niter): # We run through n iterations
                 
                 #* Choose a random datapoint to train on    
                 idx = np.random.choice(len(ytrain), 1)
@@ -422,7 +419,7 @@ class classifier_agent():
                 
                 #* Calculate the gradient and update the params
                 gradient = self.gradient(xpoint, ypoint)
-                self.params = np.asarray(np.add(self.params, np.multiply(lr, gradient.T))).ravel()
+                self.params = np.asarray(np.subtract(self.params, np.multiply(lr, gradient.T))).flatten()
                 
 
             #* For each epoch, test the new params and record
