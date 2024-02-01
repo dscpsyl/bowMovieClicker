@@ -246,12 +246,12 @@ class classifier_agent():
         #? The error rate is (num_of_wrong_predictions / total_num_of_predictions)
         
         #* Calculate the error rate
-        wrongPredictions: float = 0.0
-        for pred, actual in zip(results, y):
-            if pred != actual:
-                wrongPredictions += 1.0
+        # for pred, actual in zip(results, y):
+        #     if pred != actual:
+        #         wrongPredictions += 1.0
+        rightPredictions = np.count_nonzero(results == y)
         
-        err: float = wrongPredictions / float(len(y))
+        err: float = float(len(y) - rightPredictions) / float(len(y))
         
         # # Sanity check
         # assert err >= 0.0 and err <= 1.0, "error::The error rate is not between 0 and 1."
