@@ -177,7 +177,7 @@ class classifier_agent():
         (d,m) = X.shape
         d1 = self.params.shape[0]
         if d != d1:
-            self.params = np.array([0.0 for i in range(d)])
+            self.params = np.array([0.0 for _ in range(d)])
         # assert d == d1, f"score_function::The size of the params vector is not the same as the feature vector: {d},{d1}."
         # self.params = np.array([0.0 for i in range(d)]) <-- This was included in the original code, but I don't think it is correct
 
