@@ -97,17 +97,16 @@ class feature_extractor:
         wordCount: dict = Counter(wordList)
         
         #* Create the lil vector with the len of the different words in the sentence
-        t: sparse.lil_array = sparse.lil_array((self.d, 1), dtype=np.int64) 
-        
+        t = np.zeros((self.d, 1), dtype=np.int64)        
         #* Populate the sparse vector with the count of each word in the sentence
         for word, count in wordCount.items():
             # Check of the word is in the vocab list that we care about
             if word in self.vocab_dict:
                 # Populate the sparse vector with the count of the word at the index of the word defined in the vocab list
-                t[self.vocab_dict[word], 0] = count
+                t[self.vocab_dict[word]] = count
         
         #* Convert the lil vector to a csc vector
-        x: sparse.csc_array = t.tocsc()
+        x: sparse.csc_array = sparse.csc_array(t)
         
         #* Sanity check
         assert x.shape == (self.d, 1), "bag_of_word_feature::The shape of the sparse vector is not the same as the vocab list: %s." % str(x.shape)
