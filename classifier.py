@@ -359,16 +359,11 @@ class classifier_agent():
         # Solution:
         for i in range(niter):
             #* Calculate the gradient and update the params 
-            gradient = self.gradient(Xtrain, ytrain)
-            self.params = np.asarray(np.subtract(self.params, np.multiply(lr, gradient.T))).flatten() # Yes, it says ndarray but it is actucally a np.matrix
+            self.params = np.asarray(self.params - (lr * self.gradient(Xtrain, ytrain))).flatten()
 
             #* Test the new params and record
             train_losses.append(self.loss_function(Xtrain, ytrain))
             train_errors.append(self.error(Xtrain, ytrain))
-
-            # if i%100 == 0:
-            #     print('iter =',i,'loss = ', train_losses[-1],
-            #       'error = ', train_errors[-1])
 
         return train_losses, train_errors
 
@@ -418,16 +413,12 @@ class classifier_agent():
                 ypoint = ytrain[idx]
                 
                 #* Calculate the gradient and update the params
-                gradient = self.gradient(xpoint, ypoint)
-                self.params = np.asarray(np.subtract(self.params, np.multiply(lr, gradient.T))).flatten()
+                self.params = np.asarray(self.params - (lr * self.gradient(xpoint, ypoint))).flatten()
                 
 
             #* For each epoch, test the new params and record
             train_losses.append(self.loss_function(Xtrain, ytrain))
             train_errors.append(self.error(Xtrain, ytrain))
-
-            # print('epoch =',i,'iter=',i*len(ytrain)+j+1,'loss = ', train_losses[-1],
-            #       'error = ', train_errors[-1])
 
 
         return train_losses, train_errors
