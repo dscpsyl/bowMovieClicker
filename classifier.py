@@ -357,7 +357,7 @@ class classifier_agent():
         train_errors = [self.error(Xtrain, ytrain)]
 
         # Solution:
-        for i in range(niter):
+        for _ in range(niter):
             #* Calculate the gradient and update the params 
             self.params = np.asarray(self.params - (lr * self.gradient(Xtrain, ytrain))).flatten()
 
