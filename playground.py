@@ -1,36 +1,33 @@
 import numpy as np
 from scipy import sparse
 
-from classifier import load_data,tokenize, feature_extractor, data_processor
-from classifier import classifier_agent
+import os
 
+files = os.listdir("./aclImdb/train/neg/")
 
-with open('data/vocab.txt', "r") as file:
-        reading = file.readlines()
-        vocab_list = [item.strip() for item in reading]
-        
-feat_map = feature_extractor(vocab_list, tokenize) # You many replace this with a different feature extractor
+with open("./data/training_neg_private.txt", "w") as f:
+        for file in files:
+            with open("./aclImdb/train/neg/" + file) as f2:
+                f.write(f2.readline() + "\n")
 
-params = np.array([1.0 for _ in range(4)])
-classifier1 = classifier_agent(feat_map,params)
+files = os.listdir("./aclImdb/train/pos/")
 
-# x = sparse.csc_array([[ 0.1 ,12.3 , 3.4 , 7.1 ], [ 2.3 , 4.4 , 8.9 , 0.99], [ 5.3 , 6.5 , 1.3 , 4.2 ]])
-x = np.array([[ 0.1 ,12.3 , 3.4 , 7.1 ], [ 2.3 , 4.4 , 8.9 , 0.99], [ 5.3 , 6.5 , 1.3 , 4.2 ]])
-print(classifier1.score_function(x))
+with open("./data/training_pos_private.txt", "w") as f:
+        for file in files:
+            with open("./aclImdb/train/pos/" + file) as f2:
+                f.write(f2.readline()+ "\n")
+                
+files = os.listdir("./aclImdb/test/neg/")
 
-# x = np.matrix([[ 0.1 ,12.3 , 3.4 , 7.1 ], [ 2.3 , 4.4 , 8.9 , 0.99], [ 5.3 , 6.5 , 1.3 , 4.2 ]])
-# (d, m) = x.shape
+with open("./data/test_neg_private.txt", "w") as f:
+        for file in files:
+            with open("./aclImdb/test/neg/" + file) as f2:
+                f.write(f2.readline()+ "\n")
+                
+                
+files = os.listdir("./aclImdb/test/pos/")
 
-# p = np.array([1, 1, 1, 1])
-# p = np.tile(p, (d, 1))
-
-
-# print(x, x.shape)
-# print(p, p.shape)
-
-# _t = np.multiply(x, p)
-# print(_t)
-# _s = _t.sum(axis=1)
-# print(_s)
-# print(np.asarray(_s).flatten())
-
+with open("./data/test_pos_private.txt", "w") as f:
+        for file in files:
+            with open("./aclImdb/test/pos/" + file) as f2:
+                f.write(f2.readline()+ "\n")
