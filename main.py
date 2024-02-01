@@ -44,7 +44,7 @@ def main():
         ytrain = np.asarray(train_labels)
     else:
         print("::No option selected. Reprocessing the data. (Use -l to load the saved Xtrain)")
-        Xtrain, ytrain = text2feat.process_data_and_save_as_file(train_sentences, train_labels, "train_data.npy")
+        Xtrain, ytrain = text2feat.process_data_and_save_as_file(train_sentences, train_labels, "train_data_public.npy")
 
     
 
@@ -62,7 +62,7 @@ def main():
         print("GD: test err =", err1)
         
         #* Save trained params
-        classifier1.save_params_to_file("trained_params_gd.npy")
+        # classifier1.save_params_to_file("trained_params_gd.npy")
         
     elif(sys.argv[2] == "-s"):
         print("-s flag recieved. Training with stochastic gradient descent")
@@ -79,7 +79,7 @@ def main():
         print("SGD: test err =", err2)
         
         #* Save trained params
-        classifier2.save_params_to_file("trained_params_sgd.npy")
+        # classifier2.save_params_to_file("trained_params_sgd.npy")
         
     elif(sys.argv[2] == "-b"):
         print("-b flag recieved. Training with both gradient descent and stochastic")
