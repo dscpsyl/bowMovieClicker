@@ -8,41 +8,48 @@ import matplotlib.pyplot as plt
 
 from tqdm import tqdm as t
 from time import time
+import sys
 
 
 def main():
     print("Creating a classifier agent:")
 
-    with open('data/vocab.txt') as file:
+    with open('data/vocab_private.txt') as file:
         reading = file.readlines()
         vocab_list = [item.strip() for item in reading]
-        vocab_dict = {item: i for i, item in enumerate(vocab_list)}
 
     print("Loading and processing data ...")
 
-    sentences_pos = load_data("data/training_pos.txt")
-    sentences_neg = load_data("data/training_neg.txt")
+    sentences_pos = load_data("data/training_pos_private.txt")
+    sentences_neg = load_data("data/training_neg_private.txt")
 
     train_sentences = sentences_pos + sentences_neg
 
-    train_labels = [1 for i in range(len(sentences_pos))] + [0 for i in range(len(sentences_neg))]
+    train_labels = [1 for _ in range(len(sentences_pos))] + [0 for _ in range(len(sentences_neg))]
 
-    sentences_pos = load_data("data/test_pos_public.txt")
+    sentences_pos = load_data("data/test_pos_private.txt")
+    sentences_neg = load_data("data/test_neg_private.txt")
     test_sentences = sentences_pos + sentences_neg
-    test_labels = [1 for i in range(len(sentences_pos))] + [0 for i in range(len(sentences_neg))]   
+    test_labels = [1 for _ in range(len(sentences_pos))] + [0 for _ in range(len(sentences_neg))]   
 
-    feat_map = custom_feature_extractor(vocab_list, tokenize)
+    feat_map = custom_feature_extractor(vocab_list, tokenize, train_sentences)
 
     # Preprocess the training data into features
     text2feat = data_processor(feat_map)
     
-    Xtrain, ytrain = text2feat.process_data_and_save_as_file(train_sentences, train_labels,
+    if(sys.argv[1] == "-l"):
+        print("::Loading the saved Xtrain instead of reprocessing the data")
+        Xtrain = text2feat.load_data_from_file("custom_feat_train.npy")
+        ytrain = np.asarray(train_labels)
+    else:
+        print("::No option selected. Reprocessing the data. (Use -l to load the saved Xtrain)")
+        Xtrain, ytrain = text2feat.process_data_and_save_as_file(train_sentences, train_labels,
                                             "custom_feat_train.npy")
-    _, _ = text2feat.process_data_and_save_as_file(test_sentences,test_labels,
-                                            "custom_feat_test.npy")
+        _, _ = text2feat.process_data_and_save_as_file(test_sentences,test_labels,
+                                                "custom_feat_test.npy")
 
 
-    # train with SGD
+    # train with SGD on SSWE
     _NEPOCH = 10
     d = len(vocab_list)
     params = np.array([0.0 for _ in range(d)])
@@ -53,18 +60,18 @@ def main():
     _cc_err = np.zeros(_NEPOCH, dtype=np.float64)
 
     _cc_time = np.zeros(_NEPOCH, dtype=np.float64)    
-    
-
-    
     for i in t(range(_NEPOCH), desc= "Training with custom feature extractor"):
+        _step = 1 / (np.log(i+2)*((i+2)*10))
         sTime = time()
-        custom_classifier.train_sgd(Xtrain, ytrain, i, 0.01, RAW_TEXT = False)
+        custom_classifier.train_sgd(Xtrain, ytrain, 1, _step, RAW_TEXT = False)
         _cc_time[i] = time() - sTime
         _cc_err[i] = custom_classifier.eval_model(test_sentences,test_labels)
-    
+        print(f"Error after epoch {i+1}: {_cc_err[i]}")
+
+    print(f"Error of TF-IDF after training: {custom_classifier.eval_model(test_sentences, test_labels)}")
 
     print("Saving the model to a file...")
-    custom_classifier.save_params_to_file('custom_model.npy')
+    custom_classifier.save_params_to_file('best_model.npy')
     
     print("Creating analysis graphs...")
     plt.style.use("dark_background")
@@ -84,7 +91,7 @@ def main():
 
     fig.tight_layout()
         
-    fig.savefig("Images/cc_results.png", pad_inches=0.1)
+    fig.savefig("Images/cc_results_best.png", pad_inches=0.1)
 
 
 if __name__ == "__main__":
