@@ -25,7 +25,7 @@ def main():
     print("Creating training and test data...")
     train_sentences = sentences_pos + sentences_neg
 
-    train_labels = [1 for i in range(len(sentences_pos))] + [0 for i in range(len(sentences_neg))]
+    train_labels = [1 for _ in range(len(sentences_pos))] + [0 for i in range(len(sentences_neg))]
 
     sentences_pos = load_data("data/test_pos_public.txt")
     sentences_neg = load_data("data/test_neg_public.txt")
