@@ -4,8 +4,8 @@ import numpy as np
 from collections import Counter
 import string
 
-from sklearn.feature_extraction.text import TfidfTransformer
-from tqdm import tqdm as t
+# from sklearn.feature_extraction.text import TfidfTransformer
+# from tqdm import tqdm as t
 
 # Provided utility functions
 
@@ -121,27 +121,27 @@ class feature_extractor:
         # This function makes this any instance of this python class a callable object
         return self.bag_of_word_feature(sentence)
 
-class custom_feature_extractor(feature_extractor):
-    '''
-    This implements the custom feature extractor using the Tf-idf from SKLearn as a wrapper
-    for the basic feature extractor (bag of words).
-    '''
-    def __init__(self, vocab: list, tokenizer, train_raw_data):
-        super().__init__(vocab, tokenizer)
+# class custom_feature_extractor(feature_extractor):
+#     '''
+#     This implements the custom feature extractor using the Tf-idf from SKLearn as a wrapper
+#     for the basic feature extractor (bag of words).
+#     '''
+#     def __init__(self, vocab: list, tokenizer, train_raw_data):
+#         super().__init__(vocab, tokenizer)
         
 
-        _all = sparse.vstack([self.bag_of_word_feature(sentence) for sentence in t(train_raw_data, desc="Creating the custom feature extractor")])
+#         _all = sparse.vstack([self.bag_of_word_feature(sentence) for sentence in t(train_raw_data, desc="Creating the custom feature extractor")])
         
-        self.model = TfidfTransformer(norm = 'l2', sublinear_tf = False)
-        self.model.fit(_all)
+#         self.model = TfidfTransformer(norm = 'l2', sublinear_tf = False)
+#         self.model.fit(_all)
 
-    def feature_map(self,sentence):
-        _bog = self.bag_of_word_feature(sentence)
-        return self.model.transform(_bog)
+#     def feature_map(self,sentence):
+#         _bog = self.bag_of_word_feature(sentence)
+#         return self.model.transform(_bog)
         
 
-    def __call__(self, sentence):
-        return self.feature_map(sentence)
+#     def __call__(self, sentence):
+#         return self.feature_map(sentence)
 
 
 class classifier_agent():
@@ -402,8 +402,8 @@ class classifier_agent():
         niter = int(nepoch / sampler)
 
         for _ in range(nepoch): # For each epoch
-            for _ in t(range(niter), desc = f"::::Training for iterations of this epoch with step {lr}"): # We run through n iterations
-            # for _ in range(niter): # We run through n iterations    
+            # for _ in t(range(niter), desc = f"::::Training for iterations of this epoch with step {lr}"): # We run through n iterations
+            for _ in range(niter): # We run through n iterations    
                 
                 #* Choose a random datapoint to train on    
                 idx = np.random.choice(len(ytrain), 1)
